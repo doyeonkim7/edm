@@ -77,6 +77,12 @@ def parse_int_list(s):
 @click.option('--resume',        help='Resume from previous training state', metavar='PT',          type=str)
 @click.option('-n', '--dry-run', help='Print training options and exit',                            is_flag=True)
 
+# Data balancing options
+@click.option('--num-label-reduce', help='Number of labels to reduce samples from', metavar='INT', type=int, default=0, show_default=True)
+@click.option('--ratio-to-reduce', help='Ratio of samples to reduce for specified labels', metavar='FLOAT', type=click.FloatRange(min=0, max=1), default=0.0, show_default=True)
+@click.option('--ratio-to-orig', help='Ratio of original samples to keep', metavar='FLOAT', type=click.FloatRange(min=0, max=1), default=0.6, show_default=True)
+
+
 def main(**kwargs):
     """Train diffusion-based generative model using the techniques described in the
     paper "Elucidating the Design Space of Diffusion-Based Generative Models".
@@ -94,7 +100,16 @@ def main(**kwargs):
 
     # Initialize config dict.
     c = dnnlib.EasyDict()
-    c.dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset', path=opts.data, use_labels=opts.cond, xflip=opts.xflip, cache=opts.cache)
+    c.dataset_kwargs = dnnlib.EasyDict(
+        class_name='training.dataset.ImageFolderDataset',
+        path=opts.data,
+        use_labels=opts.cond,
+        xflip=opts.xflip,
+        cache=opts.cache,
+        num_label_reduce=opts.num_label_reduce,
+        ratio_to_reduce=opts.ratio_to_reduce,
+        ratio_to_orig=opts.ratio_to_orig,
+    )
     c.data_loader_kwargs = dnnlib.EasyDict(pin_memory=True, num_workers=opts.workers, prefetch_factor=2)
     c.network_kwargs = dnnlib.EasyDict()
     c.loss_kwargs = dnnlib.EasyDict()

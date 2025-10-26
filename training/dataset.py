@@ -14,6 +14,7 @@ import PIL.Image
 import json
 import torch
 import dnnlib
+import re
 
 try:
     import pyspng
@@ -168,6 +169,9 @@ class ImageFolderDataset(Dataset):
         path,                   # Path to directory or zip.
         resolution      = None, # Ensure specific resolution, None = highest available.
         use_pyspng      = True, # Use pyspng if available?
+        num_label_reduce= 0,
+        ratio_to_reduce = 0.0,
+        ratio_to_orig   = 0.6,
         **super_kwargs,         # Additional arguments for the Dataset base class.
     ):
         self._path = path
@@ -185,6 +189,8 @@ class ImageFolderDataset(Dataset):
 
         PIL.Image.init()
         self._image_fnames = sorted(fname for fname in self._all_fnames if self._file_ext(fname) in PIL.Image.EXTENSION)
+        self._balance_labels(self._image_fnames, num_label_reduce, ratio_to_reduce, ratio_to_orig)
+
         if len(self._image_fnames) == 0:
             raise IOError('No image files found in the specified path')
 
@@ -193,6 +199,34 @@ class ImageFolderDataset(Dataset):
         if resolution is not None and (raw_shape[2] != resolution or raw_shape[3] != resolution):
             raise IOError('Image files do not match the specified resolution')
         super().__init__(name=name, raw_shape=raw_shape, **super_kwargs)
+    
+    def _balance_labels(self, image_fnames, num_label_reduce=0, ratio_to_reduce=0.0, ratio_to_orig=0.6):
+        raw_labels = self._load_raw_labels()
+        pattern = re.compile(r'img0*(\d+)\.png')
+        labels_to_fnames = {}
+
+        for fname in image_fnames:
+            match = pattern.search(fname)
+            idx = int(match.group(1))
+            label = int(raw_labels[idx])
+            if label not in labels_to_fnames:
+                labels_to_fnames[label] = []
+            labels_to_fnames[label].append(fname)
+
+        balanced_fnames = []
+        labels = sorted(labels_to_fnames.keys())
+
+        for i, label in enumerate(labels):
+            fnames = labels_to_fnames[label]
+            if i < num_label_reduce:
+                balance_ratio = 1.0 - ratio_to_reduce
+            else:
+                balance_ratio = 1.0 + (ratio_to_reduce * num_label_reduce) / (len(labels_to_fnames) - num_label_reduce)
+            num_select = int(len(fnames) * ratio_to_orig * balance_ratio)
+            selected_fnames = np.random.choice(fnames, size=num_select, replace=False)
+            balanced_fnames.extend(selected_fnames)
+
+        return balanced_fnames
 
     @staticmethod
     def _file_ext(fname):
