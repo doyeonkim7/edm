@@ -1,0 +1,1 @@
+torchrun --standalone --nproc_per_node=2 train.py --outdir=baseline     --data=datasets/cifar10-32x32.zip --cond=0 --arch=ddpmpp --duration=70 --batch=320 --num-label-reduce=3 --ratio-to-reduce=0.5 --ratio-to-orig=0.6
