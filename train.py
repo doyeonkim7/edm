@@ -78,10 +78,10 @@ def parse_int_list(s):
 @click.option('-n', '--dry-run', help='Print training options and exit',                            is_flag=True)
 
 # Data balancing options
-@click.option('--num-label-reduce', help='Number of labels to reduce samples from', metavar='INT', type=int, default=0, show_default=True)
+@click.option('--num-label-reduce',help='Number of labels to reduce samples from', metavar='INT', type=int, default=0, show_default=True)
 @click.option('--ratio-to-reduce', help='Ratio of samples to reduce for specified labels', metavar='FLOAT', type=click.FloatRange(min=0, max=1), default=0.0, show_default=True)
-@click.option('--ratio-to-orig', help='Ratio of original samples to keep', metavar='FLOAT', type=click.FloatRange(min=0, max=1), default=0.6, show_default=True)
-
+@click.option('--ratio-to-orig',   help='Ratio of original samples to keep', metavar='FLOAT', type=click.FloatRange(min=0, max=1), default=0.6, show_default=True)
+@click.option('--adjust-loss',     help='Whether to adjust loss',                                   is_flag=True)
 
 def main(**kwargs):
     """Train diffusion-based generative model using the techniques described in the
@@ -109,6 +109,7 @@ def main(**kwargs):
         num_label_reduce=opts.num_label_reduce,
         ratio_to_reduce=opts.ratio_to_reduce,
         ratio_to_orig=opts.ratio_to_orig,
+        is_training=True,
     )
     c.data_loader_kwargs = dnnlib.EasyDict(pin_memory=True, num_workers=opts.workers, prefetch_factor=2)
     c.network_kwargs = dnnlib.EasyDict()
@@ -149,6 +150,7 @@ def main(**kwargs):
         assert opts.precond == 'edm'
         c.network_kwargs.class_name = 'training.networks.EDMPrecond'
         c.loss_kwargs.class_name = 'training.loss.EDMLoss'
+    c.adjust_loss = opts.adjust_loss
 
     # Network options.
     if opts.cbase is not None:
@@ -225,6 +227,7 @@ def main(**kwargs):
     dist.print0(f'Number of GPUs:          {dist.get_world_size()}')
     dist.print0(f'Batch size:              {c.batch_size}')
     dist.print0(f'Mixed-precision:         {c.network_kwargs.use_fp16}')
+    dist.print0(f'Adjust loss:             {opts.adjust_loss}')
     dist.print0()
 
     # Dry run?

@@ -172,6 +172,7 @@ class ImageFolderDataset(Dataset):
         num_label_reduce= 0,
         ratio_to_reduce = 0.0,
         ratio_to_orig   = 0.6,
+        is_training     = False,
         **super_kwargs,         # Additional arguments for the Dataset base class.
     ):
         self._path = path
@@ -189,8 +190,9 @@ class ImageFolderDataset(Dataset):
 
         PIL.Image.init()
         self._image_fnames = sorted(fname for fname in self._all_fnames if self._file_ext(fname) in PIL.Image.EXTENSION)
-        balanced = self._balance_labels(self._image_fnames, num_label_reduce, ratio_to_reduce, ratio_to_orig)
-        self._image_fnames = sorted(balanced)
+        if is_training and num_label_reduce > 0:
+            balanced = self._balance_labels(self._image_fnames, num_label_reduce, ratio_to_reduce, ratio_to_orig)
+            self._image_fnames = sorted(balanced)
 
         if len(self._image_fnames) == 0:
             raise IOError('No image files found in the specified path')

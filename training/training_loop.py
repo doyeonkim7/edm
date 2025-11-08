@@ -46,6 +46,7 @@ def training_loop(
     resume_kimg         = 0,        # Start from the given training progress.
     cudnn_benchmark     = True,     # Enable torch.backends.cudnn.benchmark?
     device              = torch.device('cuda'),
+    adjust_loss         = False,    # Whether to adjust loss based on data imbalance
 ):
     # Initialize.
     start_time = time.time()
@@ -129,7 +130,13 @@ def training_loop(
                 labels = labels.to(device)
                 loss = loss_fn(net=ddp, images=images, labels=labels, augment_pipe=augment_pipe)
                 training_stats.report('Loss/loss', loss)
-                loss.sum().mul(loss_scaling / batch_gpu_total).backward()
+                if adjust_loss:
+                    weight = torch.exp(loss)
+                    loss = (weight * loss).sum() / weight.sum()
+                    training_stats.report('Loss/adjusted', loss)
+                    loss.backward()
+                else:
+                    loss.sum().mul(loss_scaling / batch_gpu_total).backward()
 
         # Update weights.
         for g in optimizer.param_groups:
