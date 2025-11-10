@@ -47,6 +47,7 @@ def training_loop(
     cudnn_benchmark     = True,     # Enable torch.backends.cudnn.benchmark?
     device              = torch.device('cuda'),
     adjust_loss         = False,    # Whether to adjust loss based on data imbalance
+    loss_param          = 1.0,
 ):
     # Initialize.
     start_time = time.time()
@@ -119,6 +120,7 @@ def training_loop(
     maintenance_time = tick_start_time - start_time
     dist.update_progress(cur_nimg // 1000, total_kimg)
     stats_jsonl = None
+    softmax = torch.nn.Softmax(dim=0)
     while True:
 
         # Accumulate gradients.
@@ -131,10 +133,9 @@ def training_loop(
                 loss = loss_fn(net=ddp, images=images, labels=labels, augment_pipe=augment_pipe)
                 training_stats.report('Loss/loss', loss)
                 if adjust_loss:
-                    weight = torch.exp(loss)
-                    loss = (weight * loss).sum() / weight.sum()
-                    training_stats.report('Loss/adjusted', loss)
-                    loss.backward()
+                    loss_adjusted = softmax(loss * loss_param).detach() * loss
+                    training_stats.report('Loss/adjusted', loss_adjusted)
+                    loss_adjusted.mean().backward()
                 else:
                     loss.sum().mul(loss_scaling / batch_gpu_total).backward()
 
