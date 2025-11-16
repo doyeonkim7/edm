@@ -82,6 +82,8 @@ def parse_int_list(s):
 @click.option('--ratio-to-reduce', help='Ratio of samples to reduce for specified labels', metavar='FLOAT', type=click.FloatRange(min=0, max=1), default=0.0, show_default=True)
 @click.option('--ratio-to-orig',   help='Ratio of original samples to keep', metavar='FLOAT', type=click.FloatRange(min=0, max=1), default=0.6, show_default=True)
 @click.option('--adjust-loss',     help='Whether to adjust loss',                                   is_flag=True)
+@click.option('--loss-param',      help='Ratio of original samples to keep', metavar='FLOAT', default=1.0, show_default=True)
+
 
 def main(**kwargs):
     """Train diffusion-based generative model using the techniques described in the
@@ -151,6 +153,7 @@ def main(**kwargs):
         c.network_kwargs.class_name = 'training.networks.EDMPrecond'
         c.loss_kwargs.class_name = 'training.loss.EDMLoss'
     c.adjust_loss = opts.adjust_loss
+    c.loss_param = opts.loss_param
 
     # Network options.
     if opts.cbase is not None:

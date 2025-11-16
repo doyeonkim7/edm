@@ -190,7 +190,7 @@ class ImageFolderDataset(Dataset):
 
         PIL.Image.init()
         self._image_fnames = sorted(fname for fname in self._all_fnames if self._file_ext(fname) in PIL.Image.EXTENSION)
-        if is_training and num_label_reduce > 0:
+        if is_training:
             balanced = self._balance_labels(self._image_fnames, num_label_reduce, ratio_to_reduce, ratio_to_orig)
             self._image_fnames = sorted(balanced)
 
